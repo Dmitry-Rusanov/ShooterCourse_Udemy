@@ -83,6 +83,12 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
 	UParticleSystem* MuzzleFlash;
 	
+	/** Анимационный монтаж стрельбы из оружия */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	UAnimMontage* HipFireMontege;
+	
+
+
 	
 	//==================================================================================================================
 	//				PRIVATE FUNCTIONS
