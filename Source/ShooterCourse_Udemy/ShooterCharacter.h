@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "ShooterCharacter.generated.h"
 
+class USoundCue;
 class UCameraComponent;
 class USpringArmComponent;
 
@@ -33,6 +34,9 @@ protected:
 
 	//Вызывается посредством ввода для вращения вверх/вниз с заданной скоростью (для джойстика)
 	void LookUpAtRate(float Rate);
+
+	// Стрельба из оружия
+	void FireWeapon();
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -56,20 +60,29 @@ private:
 	//==================================================================================================================
 
 	/** Держатель камеры */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta=(AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
 	USpringArmComponent* CameraBoom;
 
 	/** Камера позади персонажа */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta=(AllowPrivateAccess = "true"))	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))	
 	UCameraComponent* FollowCamera;
 	
 	/** Базовая скорость горизонтального вращения (взгляд вправо/влево), в град/сек */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta=(AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
 	float BaseTurnRate;
 
 	/** Базовая скорость вертикального вращения (взгляд вверх/вниз) в град/сек */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta=(AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
 	float BaseLookUpRate;
+
+	/** Звук выстрела из оружия */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	USoundCue* FireSound;
+
+	/** Вспышка у ствола при выстреле */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	UParticleSystem* MuzzleFlash;
+	
 	
 	//==================================================================================================================
 	//				PRIVATE FUNCTIONS
