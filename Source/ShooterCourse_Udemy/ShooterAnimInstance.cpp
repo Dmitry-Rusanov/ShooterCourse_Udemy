@@ -5,6 +5,7 @@
 
 #include "ShooterCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 
 
 /** Собственная реализация NativeUpdateAnimation
@@ -26,7 +27,27 @@ void UShooterAnimInstance::UpdateAnimationProperties(float DeltaTime)
 		bIsInAir = ShooterCharacter->GetCharacterMovement()->IsFalling();
 		//Двигается ли персонаж?
 		bIsAccelerating =  (ShooterCharacter->GetCharacterMovement()->GetCurrentAcceleration().Size() > 0.f) ? true: false;
+ 
+		//Получить базовое вращение прицеливания
+		const FRotator AimRotation = ShooterCharacter->GetBaseAimRotation();
+		//Получить вращение движения
+		const FRotator MovementRotation = UKismetMathLibrary::MakeRotFromX(ShooterCharacter->GetVelocity());
+		MovementOffsetYaw = UKismetMathLibrary::NormalizedDeltaRotator(MovementRotation,AimRotation).Yaw;
 
+		if (ShooterCharacter->GetVelocity().Size() > 0.f)
+		{
+			LastMovementOffsetYaw = MovementOffsetYaw;
+		}
+
+		
+		//FString DebugMessage = FString::Printf(TEXT("Base Aim Rotation = %f"),AinRotation.Yaw);		
+		//FString DebugMessage = FString::Printf(TEXT("Movement Rotation = %f"),MovementRotation.Yaw);
+		// FString DebugMessage = FString::Printf(TEXT("Movement Offset Yaw = %f"),MovementOffsetYaw);
+		// if (GEngine)
+		// {
+		// 	GEngine->AddOnScreenDebugMessage(1, 0.f, FColor::White, DebugMessage);
+		// }
+		
 	}
 }
 

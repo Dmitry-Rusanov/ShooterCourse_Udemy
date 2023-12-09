@@ -40,8 +40,10 @@ private:
 
 	/** Смещение рысканья которое используется для стрейфа */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement", meta=(AllowPrivateAccess = "true"))
-	float MovementOffset;
+	float MovementOffsetYaw;
 	
-	
+	/** Смещение рысканья из предыдущего кадра, которое используется для стрейфа */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement", meta=(AllowPrivateAccess = "true"))
+	float LastMovementOffsetYaw;
 	
 };
