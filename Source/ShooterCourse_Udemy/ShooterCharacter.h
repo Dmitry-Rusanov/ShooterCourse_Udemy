@@ -35,12 +35,15 @@ protected:
 	//Вызывается посредством ввода для вращения вверх/вниз с заданной скоростью (для джойстика)
 	void LookUpAtRate(float Rate);
 
-	//
+	//Получение конечной точки дымного следа
 	bool GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& OutBeamEndLocation);
 	
 	// Стрельба из оружия
 	void FireWeapon();
-	//Получение конечной точки дымного следа
+
+	//Прицеливание
+	void AimingButtonPressed();
+	void AimingButtonReleased();
 
 public:	
 	// Called every frame
@@ -99,9 +102,18 @@ private:
 	/** Анимационный монтаж стрельбы из оружия */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
 	UAnimMontage* HipFireMontege;
-	
-	
 
+	/** Вкл/отк приближения при прицеливании */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	bool bAiming;
+
+	/** Стандартное значение поля обзора камеры */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	float CameraDefaultFOV;
+
+	/** Поле обзора при приближении */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	float CameraZoomedFOV;
 
 	
 	//==================================================================================================================
