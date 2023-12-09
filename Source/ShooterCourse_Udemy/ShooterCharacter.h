@@ -37,6 +37,8 @@ protected:
 
 	// Стрельба из оружия
 	void FireWeapon();
+	//Получение конечной точки дымного следа
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -82,10 +84,19 @@ private:
 	/** Вспышка у ствола при выстреле */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
 	UParticleSystem* MuzzleFlash;
+
+	/** Разрыв на месте попадания */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	UParticleSystem* ImpactParticles;
+
+	/** Дымный след от выстрела */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	UParticleSystem* BeamParticles;
 	
 	/** Анимационный монтаж стрельбы из оружия */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
 	UAnimMontage* HipFireMontege;
+	
 	
 
 

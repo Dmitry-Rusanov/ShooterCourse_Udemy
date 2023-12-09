@@ -8,6 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Particles/ParticleSystemComponent.h"
 #include "Sound/SoundCue.h"
 
 // Sets default values
@@ -23,7 +24,8 @@ AShooterCharacter::AShooterCharacter() :
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 300.f;//Длина рычага
 	CameraBoom->bUsePawnControlRotation = true;//Рычаг использует вращение контроллера игрока
-
+	CameraBoom->SocketOffset = FVector(0.f, 50.f, 50.f);
+	
 	// Создание и настройка камеры
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
@@ -31,11 +33,11 @@ AShooterCharacter::AShooterCharacter() :
 
 	//Персонаж не вращается от контроллера, управление только камерой
 	bUseControllerRotationPitch = false;//не использовать наклон контроллера
-	bUseControllerRotationYaw = false;	//не использовать рысканье контроллера
+	bUseControllerRotationYaw = true;	// использовать рысканье контроллера
 	bUseControllerRotationRoll = false; //не использовать поворот контроллера
 
 	//Настройка движения персонажа
-	GetCharacterMovement()->bOrientRotationToMovement = true;//Персонаж двигается в направлении ввода
+	GetCharacterMovement()->bOrientRotationToMovement = false;//Персонаж не двигается в направлении ввода
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f);// ... с этой скоростью вращения
 	GetCharacterMovement()->JumpZVelocity = 600.f;//Скорость прыжка
 	GetCharacterMovement()->AirControl = 0.2f;  
@@ -117,17 +119,70 @@ void AShooterCharacter::FireWeapon()
 	{
 		UGameplayStatics::PlaySound2D(this, FireSound);
 	}
-	const USkeletalMeshSocket* BarrelSocket = GetMesh()->GetSocketByName("BarrelSocket");
-	if (BarrelSocket)
+	if (const USkeletalMeshSocket* BarrelSocket = GetMesh()->GetSocketByName("BarrelSocket"))
 	{
 		const FTransform SocketTransform = BarrelSocket->GetSocketTransform(GetMesh());
 		if (MuzzleFlash)
 		{
 			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFlash, SocketTransform);
 		}
+		//Viewport size
+		FVector2d ViewportSize;
+		if (GEngine && GEngine->GameViewport)
+		{
+			GEngine->GameViewport->GetViewportSize(ViewportSize);
+		}
+		//Crosshair location
+		FVector2d CrosshairLocation(ViewportSize.X / 2.f, ViewportSize.Y / 2.f);
+		CrosshairLocation.Y -= 50.f;
+		//Проецирование экраннго положения прицела в мировое
+		FVector CrosshairWorldPosition;
+		FVector CrosshairWorldDirection;
+
+
+		if (bool bScreenToWorld =  UGameplayStatics::DeprojectScreenToWorld(
+			UGameplayStatics::GetPlayerController(this, 0),
+			CrosshairLocation,
+			CrosshairWorldPosition,
+			CrosshairWorldDirection))
+		{
+			FHitResult ScreenTraceHit;
+			const FVector Start {CrosshairWorldPosition};//Начало луча трассировки
+			const FVector End {CrosshairWorldPosition + CrosshairWorldDirection * 50'000.f};//Конец луча трассировки
+			FVector BeamEndPoint{End};//Конечная точка дымного следа, если никуда не попали
+
+			//Трассировка от перекрестия прицела в мировое пространство
+			GetWorld()->LineTraceSingleByChannel(ScreenTraceHit, Start, End, ECollisionChannel::ECC_Visibility);
+			if (ScreenTraceHit.bBlockingHit)//Попадание луча трассировки
+			{
+				BeamEndPoint = ScreenTraceHit.Location;//Новое положение дымного следа
+				//Вторая трассировка от ствола оружия до перекрестия прицела
+				FHitResult WeaponTraceHit;
+				const FVector WeaponTraceStart {SocketTransform.GetLocation()};
+				const FVector WeaponTraceEnd {BeamEndPoint};
+
+				GetWorld()->LineTraceSingleByChannel(WeaponTraceHit, WeaponTraceStart, WeaponTraceEnd, ECollisionChannel::ECC_Visibility);
+				if (WeaponTraceHit.bBlockingHit)
+				{
+					BeamEndPoint = WeaponTraceHit.Location;
+				}
+				
+				if (BeamParticles)//Дымный след
+				{
+					if (UParticleSystemComponent* Beam = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), BeamParticles, SocketTransform))
+					{
+						Beam->SetVectorParameter(FName("Target"), BeamEndPoint);
+					}
+					// Частицы в месте попадания, после обновления конечной точки дымного следа
+					if (ImpactParticles)
+					{
+						UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactParticles, BeamEndPoint);
+					}
+				}
+			}
+		}
 	}
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	if (AnimInstance && HipFireMontege)
+	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance(); AnimInstance && HipFireMontege)
 	{
 		AnimInstance->Montage_Play(HipFireMontege);
 		AnimInstance->Montage_JumpToSection(FName("StartFire"));
