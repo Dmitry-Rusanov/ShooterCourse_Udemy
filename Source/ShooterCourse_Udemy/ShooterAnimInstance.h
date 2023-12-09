@@ -37,5 +37,11 @@ private:
 	/** true - персонаж двигается, false - стоит */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Movement", meta=(AllowPrivateAccess = "true"))
 	bool bIsAccelerating;
+
+	/** Смещение рысканья которое используется для стрейфа */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement", meta=(AllowPrivateAccess = "true"))
+	float MovementOffset;
+	
+	
 	
 };

@@ -111,6 +111,63 @@ void AShooterCharacter::LookUpAtRate(float Rate)
 }
 
 /**
+ * 
+ * @param MuzzleSocketLocation 
+ * @param OutBeamEndLocation 
+ * @return 
+ */
+bool AShooterCharacter::GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& OutBeamEndLocation)
+{
+	//Viewport size
+	FVector2d ViewportSize;
+	if (GEngine && GEngine->GameViewport)
+	{
+		GEngine->GameViewport->GetViewportSize(ViewportSize);
+	}
+	//Crosshair location
+	FVector2d CrosshairLocation(ViewportSize.X / 2.f, ViewportSize.Y / 2.f);
+	CrosshairLocation.Y -= 50.f;
+	//Проецирование экраннго положения прицела в мировое
+	FVector CrosshairWorldPosition;
+	FVector CrosshairWorldDirection;
+
+	bool bScreenToWorld = UGameplayStatics::DeprojectScreenToWorld(
+		UGameplayStatics::GetPlayerController(this, 0),
+		CrosshairLocation,
+		CrosshairWorldPosition,
+		CrosshairWorldDirection);
+
+	if (bScreenToWorld)
+	{
+		FHitResult ScreenTraceHit;
+		const FVector Start{CrosshairWorldPosition}; //Начало луча трассировки
+		const FVector End{CrosshairWorldPosition + CrosshairWorldDirection * 50'000.f}; //Конец луча трассировки
+		OutBeamEndLocation = End;//Конечная точка дымного следа, если никуда не попали
+
+		//Трассировка от перекрестия прицела в мировое пространство
+		GetWorld()->LineTraceSingleByChannel(ScreenTraceHit, Start, End, ECollisionChannel::ECC_Visibility);
+		if (ScreenTraceHit.bBlockingHit) //Попадание луча трассировки
+		{
+			OutBeamEndLocation = ScreenTraceHit.Location; //Новое положение дымного следа
+		}
+
+		//Вторая трассировка от ствола оружия до перекрестия прицела
+		FHitResult WeaponTraceHit;
+		const FVector WeaponTraceStart{MuzzleSocketLocation};
+		const FVector WeaponTraceEnd{OutBeamEndLocation};
+
+		GetWorld()->LineTraceSingleByChannel(WeaponTraceHit, WeaponTraceStart, WeaponTraceEnd,
+		                                     ECollisionChannel::ECC_Visibility);
+		if (WeaponTraceHit.bBlockingHit)
+		{
+			OutBeamEndLocation = WeaponTraceHit.Location;
+		}
+		return true;
+	}
+	return false;
+}
+
+/**
  * Стрельба из оружия 
  */
 void AShooterCharacter::FireWeapon()
@@ -126,61 +183,22 @@ void AShooterCharacter::FireWeapon()
 		{
 			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFlash, SocketTransform);
 		}
-		//Viewport size
-		FVector2d ViewportSize;
-		if (GEngine && GEngine->GameViewport)
+		FVector BeamEnd;
+		bool bBeamEnd = GetBeamEndLocation(SocketTransform.GetLocation(), BeamEnd);
+
+		if (bBeamEnd)
 		{
-			GEngine->GameViewport->GetViewportSize(ViewportSize);
-		}
-		//Crosshair location
-		FVector2d CrosshairLocation(ViewportSize.X / 2.f, ViewportSize.Y / 2.f);
-		CrosshairLocation.Y -= 50.f;
-		//Проецирование экраннго положения прицела в мировое
-		FVector CrosshairWorldPosition;
-		FVector CrosshairWorldDirection;
-
-
-		if (bool bScreenToWorld =  UGameplayStatics::DeprojectScreenToWorld(
-			UGameplayStatics::GetPlayerController(this, 0),
-			CrosshairLocation,
-			CrosshairWorldPosition,
-			CrosshairWorldDirection))
-		{
-			FHitResult ScreenTraceHit;
-			const FVector Start {CrosshairWorldPosition};//Начало луча трассировки
-			const FVector End {CrosshairWorldPosition + CrosshairWorldDirection * 50'000.f};//Конец луча трассировки
-			FVector BeamEndPoint{End};//Конечная точка дымного следа, если никуда не попали
-
-			//Трассировка от перекрестия прицела в мировое пространство
-			GetWorld()->LineTraceSingleByChannel(ScreenTraceHit, Start, End, ECollisionChannel::ECC_Visibility);
-			if (ScreenTraceHit.bBlockingHit)//Попадание луча трассировки
+			if (ImpactParticles)
 			{
-				BeamEndPoint = ScreenTraceHit.Location;//Новое положение дымного следа
-				//Вторая трассировка от ствола оружия до перекрестия прицела
-				FHitResult WeaponTraceHit;
-				const FVector WeaponTraceStart {SocketTransform.GetLocation()};
-				const FVector WeaponTraceEnd {BeamEndPoint};
-
-				GetWorld()->LineTraceSingleByChannel(WeaponTraceHit, WeaponTraceStart, WeaponTraceEnd, ECollisionChannel::ECC_Visibility);
-				if (WeaponTraceHit.bBlockingHit)
-				{
-					BeamEndPoint = WeaponTraceHit.Location;
-				}
-				
-				if (BeamParticles)//Дымный след
-				{
-					if (UParticleSystemComponent* Beam = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), BeamParticles, SocketTransform))
-					{
-						Beam->SetVectorParameter(FName("Target"), BeamEndPoint);
-					}
-					// Частицы в месте попадания, после обновления конечной точки дымного следа
-					if (ImpactParticles)
-					{
-						UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactParticles, BeamEndPoint);
-					}
-				}
+				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(),ImpactParticles, BeamEnd);
+			}
+			UParticleSystemComponent* Beam = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), BeamParticles, SocketTransform);
+			if (Beam)
+			{
+				Beam->SetVectorParameter(FName("Target"), BeamEnd);
 			}
 		}
+		
 	}
 	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance(); AnimInstance && HipFireMontege)
 	{

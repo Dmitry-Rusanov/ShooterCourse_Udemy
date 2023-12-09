@@ -35,6 +35,9 @@ protected:
 	//Вызывается посредством ввода для вращения вверх/вниз с заданной скоростью (для джойстика)
 	void LookUpAtRate(float Rate);
 
+	//
+	bool GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& OutBeamEndLocation);
+	
 	// Стрельба из оружия
 	void FireWeapon();
 	//Получение конечной точки дымного следа
