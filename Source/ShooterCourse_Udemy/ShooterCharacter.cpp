@@ -11,13 +11,24 @@
 #include "Particles/ParticleSystemComponent.h"
 #include "Sound/SoundCue.h"
 
-// Sets default values
+//================================================================//
 AShooterCharacter::AShooterCharacter() :
 	BaseTurnRate(45.f),
 	BaseLookUpRate(45.f),
+	HipTurnRate(90.f),
+	HipLookUpRate(90.f),
+	AimingTurnRate(20.f),
+	AimingLookUpRate(20.f),
+	MouseHipTurnRate(1.f),
+	MouseHipLookUpRate(1.f),
+	MouseAimingTurnRate(0.2f),
+	MouseAimingLookUpRate(0.2f),
 	bAiming(false),
 	CameraDefaultFOV(0.f),
-	CameraZoomedFOV(60.f)
+	CameraZoomedFOV(35.f),
+	CameraCurrentFOV(0.f),
+	ZoomInterpSpeed(10.f)
+	
 {
  	// Установите этот символ для вызова Tick() в каждом кадре. Вы можете отключить эту функцию,
  	// чтобы повысить производительность, если она вам не нужна.
@@ -25,9 +36,9 @@ AShooterCharacter::AShooterCharacter() :
 	//Создание и настройка рычага камеры
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 300.f;//Длина рычага
+	CameraBoom->TargetArmLength = 180.f;//Длина рычага
 	CameraBoom->bUsePawnControlRotation = true;//Рычаг использует вращение контроллера игрока
-	CameraBoom->SocketOffset = FVector(0.f, 50.f, 50.f);
+	CameraBoom->SocketOffset = FVector(0.f, 50.f, 70.f);
 	
 	// Создание и настройка камеры
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
@@ -45,8 +56,7 @@ AShooterCharacter::AShooterCharacter() :
 	GetCharacterMovement()->JumpZVelocity = 600.f;//Скорость прыжка
 	GetCharacterMovement()->AirControl = 0.2f;  
 }
-
-//Вызывается при запуске игры или при появлении
+//================================================================//
 void AShooterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -56,11 +66,7 @@ void AShooterCharacter::BeginPlay()
 		CameraDefaultFOV = GetFollowCamera()->FieldOfView;
 	}
 }
-
-/**
- * Движение вперед / назад 
- * @param Value 1.0f - вперед, -1,0f - назад
- */
+//================================================================//
 void AShooterCharacter::MoveForward(float Value)
 {
 	if((Controller != nullptr) && (Value != 0.0f))
@@ -75,11 +81,7 @@ void AShooterCharacter::MoveForward(float Value)
 		AddMovementInput(Direction, Value);
 	}
 }
-
-/**
- * Движение вправо / влево
- * @param Value 1.0f - вправо, -1.0f - влево 
- */
+//================================================================//
 void AShooterCharacter::MoveRight(float Value)
 {
 	if((Controller != nullptr) && (Value != 0.0f))
@@ -94,35 +96,33 @@ void AShooterCharacter::MoveRight(float Value)
 		AddMovementInput(Direction, Value);
 	}
 }
-
-/**
- * Вызывается посредством ввода для вращения вправо/влево с заданной скоростью.
- * Рассчитывает угол поворота для каждого кадра.
- * Применимо для джойстика и клавиш курсора.
- * @param Rate Нормализованное значение скорости, т.е. 1.0f - 100% желаемой скорости вращения
- */
+//================================================================//
 void AShooterCharacter::TurnAtRate(float Rate)
 {
 	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());// deg/sec * sec/frame = deg/frame unit
 }
-
-/**
- * Вызывается посредством ввода для вращения вверх/вниз с заданной скоростью.
- * Рассчитывает угол поворота для каждого кадра.
- * Применимо для джойстика и клавиш курсора.
- * @param Rate Нормализованное значение скорости, т.е. 1.0f - 100% желаемой скорости вращения
- */
+//================================================================//
 void AShooterCharacter::LookUpAtRate(float Rate)
 {
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
+//================================================================//
+void AShooterCharacter::Turn(float Value)
+{
+	float TurnScaleFactor{1.f};
 
-/**
- * Получение конечной точки дымного следа от выстрела
- * @param MuzzleSocketLocation сокет на конце ствола
- * @param OutBeamEndLocation ссылка на конечную точку дымного следа от выстрела
- * @return true - было попадание
- */
+	TurnScaleFactor = (bAiming)? MouseAimingTurnRate : MouseHipTurnRate;
+	AddControllerYawInput(Value * TurnScaleFactor);
+}
+//================================================================//
+void AShooterCharacter::LookUp(float Value)
+{
+	float TurnScaleFactor{1.f};
+
+	TurnScaleFactor = (bAiming)? MouseAimingLookUpRate : MouseHipLookUpRate;
+	AddControllerPitchInput(Value * TurnScaleFactor);
+}
+//================================================================//
 bool AShooterCharacter::GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& OutBeamEndLocation)
 {
 	//Viewport size
@@ -173,10 +173,7 @@ bool AShooterCharacter::GetBeamEndLocation(const FVector& MuzzleSocketLocation, 
 	}
 	return false;
 }
-
-/**
- * Стрельба из оружия 
- */
+//================================================================//
 void AShooterCharacter::FireWeapon()
 {
 	if (FireSound)
@@ -212,33 +209,56 @@ void AShooterCharacter::FireWeapon()
 		AnimInstance->Montage_JumpToSection(FName("StartFire"));
 	}
 }
-
-/**
- * Устанавливает bAiming true
- */
+//================================================================//
 void AShooterCharacter::AimingButtonPressed()
 {
 	bAiming = true;
-	FollowCamera->SetFieldOfView(CameraZoomedFOV);
 }
-
-/**
- * Устанавливает bAiming false
- */
+//================================================================//
 void AShooterCharacter::AimingButtonReleased()
 {
 	bAiming = false;
-	FollowCamera->SetFieldOfView(CameraDefaultFOV);
 }
-
-/** Вызывается каждый кадр */
+//================================================================//
+void AShooterCharacter::CameraInterpZoom(float DeltaTime)
+{
+	if (bAiming)
+	{
+		CameraCurrentFOV = FMath::FInterpTo(CameraCurrentFOV, CameraZoomedFOV, DeltaTime, ZoomInterpSpeed);
+	}
+	else
+	{
+		CameraCurrentFOV = FMath::FInterpTo(CameraCurrentFOV, CameraDefaultFOV, DeltaTime, ZoomInterpSpeed);
+	}
+	FollowCamera->SetFieldOfView(CameraCurrentFOV);
+}
+//================================================================//
+void AShooterCharacter::SetLookRates()
+{
+	if (bAiming)
+	{
+		BaseTurnRate = AimingTurnRate;
+		BaseLookUpRate = AimingLookUpRate;
+	}
+	else
+	{
+		BaseTurnRate = HipTurnRate;
+		BaseLookUpRate = HipTurnRate;
+	}
+	
+}
+//================================================================//
 void AShooterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-}
+	// Интерполяция для масштабирования при прицеливании
+	CameraInterpZoom(DeltaTime);
+	// Изменение скорости вращения при прицеливании и без него
+	SetLookRates();
 
-/** Вызывается для привязки функциональности к вводу */
+}
+//================================================================//
 void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -249,8 +269,8 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindAxis("MoveRight", this, &AShooterCharacter::MoveRight);
 	PlayerInputComponent->BindAxis("TurnRate", this, &AShooterCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AShooterCharacter::LookUpAtRate);
-	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
-	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
+	PlayerInputComponent->BindAxis("Turn", this, &AShooterCharacter::Turn);
+	PlayerInputComponent->BindAxis("LookUp", this, &AShooterCharacter::LookUp);
 
 	//Action
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
@@ -263,4 +283,20 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	
 	
 }
+//================================================================//
 
+//================================================================//
+
+//================================================================//
+
+//================================================================//
+
+//================================================================//
+
+//================================================================//
+
+//================================================================//
+
+//================================================================//
+
+//================================================================//

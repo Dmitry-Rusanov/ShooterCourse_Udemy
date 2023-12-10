@@ -16,55 +16,118 @@ class SHOOTERCOURSE_UDEMY_API AShooterCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
+
+	//==================================================================================================================
+	//				PUBLIC PROPERTIES & FIELDS
+	//==================================================================================================================
+
+	//==================================================================================================================
+	//				PUBLIC FUNCTIONS
+	//==================================================================================================================
+
+	/** Устанавливает значения по умолчанию для свойств этого персонажа. */
 	AShooterCharacter();
-
-protected:
-	// Вызывается при запуске игры или при появлении
-	virtual void BeginPlay() override;
 	
-	// Движение вперед / назад 
-	void MoveForward(float Value);
+	/** Получить указатель на держатель камеры */
+	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return  CameraBoom; }
 
-	// Движение вправо / влево 
-	void MoveRight(float Value);
+	/**Получить указатель на камеру */
+	FORCEINLINE UCameraComponent* GetFollowCamera() const { return  FollowCamera; }
 
-	//Вызывается посредством ввода для вращения вправо/влево с заданной скоростью (для джойстика)
-	void TurnAtRate(float Rate);
+	/** Получить состояние прицеливания активно / не активно */
+	FORCEINLINE bool GetAiming() const {return bAiming;}
 
-	//Вызывается посредством ввода для вращения вверх/вниз с заданной скоростью (для джойстика)
-	void LookUpAtRate(float Rate);
-
-	//Получение конечной точки дымного следа
-	bool GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& OutBeamEndLocation);
-	
-	// Стрельба из оружия
-	void FireWeapon();
-
-	//Прицеливание
-	void AimingButtonPressed();
-	void AimingButtonReleased();
-
-public:	
-	// Called every frame
+	/** Вызывается каждый кадр */
 	virtual void Tick(float DeltaTime) override;
 
-	// Called to bind functionality to input
+	/** Вызывается для привязки функциональности к вводу */
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	
 
-	//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	//**********************				MY SECTIONS				****************************************************
-	//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+protected:
+	/**
+	 * Вызывается при запуске игры или при появлении
+	 */
+	virtual void BeginPlay() override;
+	
+	/**
+	 * Движение вперед / назад 
+	 * @param Value 1.0f - вперед, -1,0f - назад
+	 */
+	void MoveForward(float Value);
+
+	/**
+	 * Движение вправо / влево
+	 * @param Value 1.0f - вправо, -1.0f - влево 
+	 */
+	void MoveRight(float Value);
+
+	/**
+	 * Вызывается посредством ввода для вращения вправо/влево с заданной скоростью.
+	 * Рассчитывает угол поворота для каждого кадра.
+	 * Применимо для джойстика и клавиш курсора.
+	 * @param Rate Нормализованное значение скорости, т.е. 1.0f - 100% желаемой скорости вращения
+	 */
+	void TurnAtRate(float Rate);
+
+	/**
+	 * Вызывается посредством ввода для вращения вверх/вниз с заданной скоростью.
+	 * Рассчитывает угол поворота для каждого кадра.
+	 * Применимо для джойстика и клавиш курсора.
+	 * @param Rate Нормализованное значение скорости, т.е. 1.0f - 100% желаемой скорости вращения
+	 */
+	void LookUpAtRate(float Rate);
+
+	/**
+	 * Вращение контроллера основанное от движения по  Х оси мыши
+	 * @param Value Значение ввода от Х оси мыши
+	 */
+	void Turn(float Value);
+
+	/**
+	 * Вращение контроллера основанное от движения по  Y оси мыши
+	 * @param Value Значение ввода от Y оси мыши
+	 */
+	void LookUp(float Value);
+	
+	/**
+	 * Получение конечной точки дымного следа от выстрела
+	 * @param MuzzleSocketLocation сокет на конце ствола
+	 * @param OutBeamEndLocation ссылка на конечную точку дымного следа от выстрела
+	 * @return true - было попадание
+	 */
+	bool GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& OutBeamEndLocation);
+	
+	/**
+	 * Стрельба из оружия 
+	 */
+	void FireWeapon();
+
+	/**
+	 * Устанавливает bAiming true
+	 */
+	void AimingButtonPressed();
+
+	/**
+	 * Устанавливает bAiming false
+	 */
+	void AimingButtonReleased();
+
+	/**
+	 * Интерполяция при приближении взгляда в начале и в конце прицеливания
+	 * @param DeltaTime 
+	 */
+	void CameraInterpZoom(float DeltaTime);
+
+	/**
+	 * Установка скорости вращения при начале/окончании прицеливания
+	 */
+	void SetLookRates();
 	
 private:
+	
 	//==================================================================================================================
-	//				PRIVATE FIELDS 
-	//==================================================================================================================
-
-	//==================================================================================================================
-	//				PRIVATE PROPERTIES
+	//				PRIVATE PROPERTIES & FIELDS
 	//==================================================================================================================
 
 	/** Держатель камеры */
@@ -83,6 +146,38 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
 	float BaseLookUpRate;
 
+	/** Базовая скорость горизонтального вращения (взгляд вправо/влево), в град/сек, при стрельбе от бедра */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float HipTurnRate;
+
+	/** Базовая скорость вертикального вращения (взгляд вверх/вниз) в град/сек, при стрельбе от бедра */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float HipLookUpRate;
+
+	/** Базовая скорость горизонтального вращения (взгляд вправо/влево), в град/сек, при прицеливании*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float AimingTurnRate;
+
+	/** Базовая скорость вертикального вращения (взгляд вверх/вниз) в град/сек, при прицеливании*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float AimingLookUpRate;
+
+	/** Множитель обзора при использовании Х оси мыши, в режиме стрельбы от бедра */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float MouseHipTurnRate;
+
+	/** Множитель обзора при использовании Y оси мыши, в режиме стрельбы от бедра */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float MouseHipLookUpRate;
+
+	/** Множитель обзора при использовании Х оси мыши, в режиме прицеливания */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float MouseAimingTurnRate;
+
+	/** Множитель обзора при использовании Y оси мыши, в режиме прицеливания */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float MouseAimingLookUpRate;
+	
 	/** Звук выстрела из оружия */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
 	USoundCue* FireSound;
@@ -115,26 +210,14 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
 	float CameraZoomedFOV;
 
-	
-	//==================================================================================================================
-	//				PRIVATE FUNCTIONS
-	//==================================================================================================================
-public:
-	//==================================================================================================================
-	//				PUBLIC FIELDS 
-	//==================================================================================================================
+	/** Текущее значение поля обзора  */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	float CameraCurrentFOV;
 
-	//==================================================================================================================
-	//				PUBLIC PROPERTIES
-	//==================================================================================================================
+	/** Скорость интерполяции при приближении (прицеливании) */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	float ZoomInterpSpeed;
 
-	//==================================================================================================================
-	//				PUBLIC FUNCTIONS
-	//==================================================================================================================
 
-	/** Получить указатель на держатель камеры */
-	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return  CameraBoom; }
 
-	/**Получить указатель на камеру */
-	FORCEINLINE UCameraComponent* GetFollowCamera() const { return  FollowCamera; }
 };
