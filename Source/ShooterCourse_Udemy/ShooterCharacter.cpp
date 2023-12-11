@@ -33,7 +33,10 @@ AShooterCharacter::AShooterCharacter() :
 	CrosshairInAirFactor(0.f),
 	CrosshairAimFactor(0.f),
 	ShootTimeDuration(0.05f),
-	bFiringBullet(false)
+	bFiringBullet(false),
+	AutomaticFireRate(0.1f),
+	bShouldFire(true),
+	bFireButtonPressed(false)
 	
 {
  	// Установите этот символ для вызова Tick() в каждом кадре. Вы можете отключить эту функцию,
@@ -107,8 +110,8 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindAction("AimingButton", IE_Pressed, this, &AShooterCharacter::AimingButtonPressed);
 	PlayerInputComponent->BindAction("AimingButton", IE_Released, this, &AShooterCharacter::AimingButtonReleased);
 	//Fire
-	PlayerInputComponent->BindAction("FireButton", IE_Pressed, this, &AShooterCharacter::FireWeapon);
-	
+	PlayerInputComponent->BindAction("FireButton", IE_Pressed, this, &AShooterCharacter::FireButtonPressed);
+	PlayerInputComponent->BindAction("FireButton", IE_Released, this, &AShooterCharacter::FireButtonReleased);
 	
 }
 //================================================================//
@@ -370,18 +373,45 @@ void AShooterCharacter::FinishCrosshairBulletFire()
 {
 	bFiringBullet = false;
 }
-
-
-
-
-
-
 //================================================================//
-
+void AShooterCharacter::FireButtonPressed()
+{
+	bFireButtonPressed = true;
+	StartFireTimer();
+}
 //================================================================//
-
+void AShooterCharacter::FireButtonReleased()
+{
+	bFireButtonPressed = false;
+}
 //================================================================//
-
+void AShooterCharacter::StartFireTimer()
+{
+	if (bShouldFire)
+	{
+		FireWeapon();
+		bShouldFire = false;
+		GetWorldTimerManager().SetTimer(AutoFireTimer, this, &AShooterCharacter::AutoFireReset, AutomaticFireRate);
+	}
+}
 //================================================================//
-
+void AShooterCharacter::AutoFireReset()
+{
+	bShouldFire = true;
+	if (bFireButtonPressed)
+	{
+		StartFireTimer();
+	}
+}
+//================================================================//
+//================================================================//
+//================================================================//
+//================================================================//
+//================================================================//
+//================================================================//
+//================================================================//
+//================================================================//
+//================================================================//
+//================================================================//
+//================================================================//
 //================================================================//

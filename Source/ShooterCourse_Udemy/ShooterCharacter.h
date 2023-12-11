@@ -172,6 +172,17 @@ private:
 	bool bFiringBullet;
 	FTimerHandle CrosshairShotTimer;
 
+	/** Кнопка стрельбы нажата */
+	bool bFireButtonPressed;
+
+	/** Должен ли игрок стрелять */
+	bool bShouldFire;
+
+	/** Темп автоматической стрельбы */
+	float AutomaticFireRate;
+
+	/** Таймер для автоматической стрельбы */
+	FTimerHandle AutoFireTimer;
 	
 	//==================================================================================================================
 	//				PRIVATE FUNCTIONS
@@ -267,4 +278,29 @@ private:
 	 */
 	UFUNCTION()
 	void FinishCrosshairBulletFire();
+
+	//	Автоматическая стрельба
+	
+	/**
+	 * Кнопка стрельбы нажата
+	 */
+	void FireButtonPressed();
+
+	/**
+	 * Кнопка стрельбы отпущена
+	 */
+	void FireButtonReleased();
+
+	/**
+	 * Запускает таймер 
+	 */
+	void StartFireTimer();
+
+	/**
+	 * Обратный вызов по завершении таймера для автоматической стрельбы
+	 */ 
+	UFUNCTION()
+	void AutoFireReset();
+
+	//-------------------------------------------------------
 };
