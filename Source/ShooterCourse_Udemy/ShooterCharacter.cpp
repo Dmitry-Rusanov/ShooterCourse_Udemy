@@ -27,7 +27,13 @@ AShooterCharacter::AShooterCharacter() :
 	CameraDefaultFOV(0.f),
 	CameraZoomedFOV(35.f),
 	CameraCurrentFOV(0.f),
-	ZoomInterpSpeed(10.f)
+	ZoomInterpSpeed(10.f),
+	CrosshairSpredMultiplier(0.f),
+	CrosshairVelocityFactor(0.f),
+	CrosshairInAirFactor(0.f),
+	CrosshairAimFactor(0.f),
+	ShootTimeDuration(0.05f),
+	bFiringBullet(false)
 	
 {
  	// Установите этот символ для вызова Tick() в каждом кадре. Вы можете отключить эту функцию,
@@ -57,6 +63,20 @@ AShooterCharacter::AShooterCharacter() :
 	GetCharacterMovement()->AirControl = 0.2f;  
 }
 //================================================================//
+void AShooterCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// Интерполяция для масштабирования при прицеливании
+	CameraInterpZoom(DeltaTime);
+	// Изменение скорости вращения при прицеливании и без него
+	SetLookRates();
+	// Вычисление разброса (размера) перекрестия прицела от различных факторов
+	CalculateCrosshairSpread(DeltaTime);
+	
+
+}
+//================================================================//
 void AShooterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -67,7 +87,37 @@ void AShooterCharacter::BeginPlay()
 	}
 }
 //================================================================//
-void AShooterCharacter::MoveForward(float Value)
+void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	check(PlayerInputComponent);
+
+	//Axis
+	PlayerInputComponent->BindAxis("MoveForward", this, &AShooterCharacter::MoveForward);
+	PlayerInputComponent->BindAxis("MoveRight", this, &AShooterCharacter::MoveRight);
+	PlayerInputComponent->BindAxis("TurnRate", this, &AShooterCharacter::TurnAtRate);
+	PlayerInputComponent->BindAxis("LookUpRate", this, &AShooterCharacter::LookUpAtRate);
+	PlayerInputComponent->BindAxis("Turn", this, &AShooterCharacter::Turn);
+	PlayerInputComponent->BindAxis("LookUp", this, &AShooterCharacter::LookUp);
+
+	//Action
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+	//Aiming
+	PlayerInputComponent->BindAction("AimingButton", IE_Pressed, this, &AShooterCharacter::AimingButtonPressed);
+	PlayerInputComponent->BindAction("AimingButton", IE_Released, this, &AShooterCharacter::AimingButtonReleased);
+	//Fire
+	PlayerInputComponent->BindAction("FireButton", IE_Pressed, this, &AShooterCharacter::FireWeapon);
+	
+	
+}
+//================================================================//
+float AShooterCharacter::GetCrosshairSpreadMultiplier() const
+{
+return CrosshairSpredMultiplier;	
+}
+//================================================================//
+void AShooterCharacter::MoveForward(const float Value)
 {
 	if((Controller != nullptr) && (Value != 0.0f))
 	{
@@ -82,7 +132,7 @@ void AShooterCharacter::MoveForward(float Value)
 	}
 }
 //================================================================//
-void AShooterCharacter::MoveRight(float Value)
+void AShooterCharacter::MoveRight(const float Value)
 {
 	if((Controller != nullptr) && (Value != 0.0f))
 	{
@@ -97,17 +147,17 @@ void AShooterCharacter::MoveRight(float Value)
 	}
 }
 //================================================================//
-void AShooterCharacter::TurnAtRate(float Rate)
+void AShooterCharacter::TurnAtRate(const float Rate)
 {
 	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());// deg/sec * sec/frame = deg/frame unit
 }
 //================================================================//
-void AShooterCharacter::LookUpAtRate(float Rate)
+void AShooterCharacter::LookUpAtRate(const float Rate)
 {
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 //================================================================//
-void AShooterCharacter::Turn(float Value)
+void AShooterCharacter::Turn(const float Value)
 {
 	float TurnScaleFactor{1.f};
 
@@ -115,7 +165,7 @@ void AShooterCharacter::Turn(float Value)
 	AddControllerYawInput(Value * TurnScaleFactor);
 }
 //================================================================//
-void AShooterCharacter::LookUp(float Value)
+void AShooterCharacter::LookUp(const float Value)
 {
 	float TurnScaleFactor{1.f};
 
@@ -123,7 +173,7 @@ void AShooterCharacter::LookUp(float Value)
 	AddControllerPitchInput(Value * TurnScaleFactor);
 }
 //================================================================//
-bool AShooterCharacter::GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& OutBeamEndLocation)
+bool AShooterCharacter::GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& OutBeamEndLocation) const
 {
 	//Viewport size
 	FVector2d ViewportSize;
@@ -174,6 +224,7 @@ bool AShooterCharacter::GetBeamEndLocation(const FVector& MuzzleSocketLocation, 
 	return false;
 }
 //================================================================//
+// ReSharper disable once CppMemberFunctionMayBeConst
 void AShooterCharacter::FireWeapon()
 {
 	if (FireSound)
@@ -208,6 +259,7 @@ void AShooterCharacter::FireWeapon()
 		AnimInstance->Montage_Play(HipFireMontege);
 		AnimInstance->Montage_JumpToSection(FName("StartFire"));
 	}
+	StartCrosshairBulletFire();
 }
 //================================================================//
 void AShooterCharacter::AimingButtonPressed()
@@ -220,7 +272,7 @@ void AShooterCharacter::AimingButtonReleased()
 	bAiming = false;
 }
 //================================================================//
-void AShooterCharacter::CameraInterpZoom(float DeltaTime)
+void AShooterCharacter::CameraInterpZoom(const float DeltaTime)
 {
 	if (bAiming)
 	{
@@ -248,48 +300,81 @@ void AShooterCharacter::SetLookRates()
 	
 }
 //================================================================//
-void AShooterCharacter::Tick(float DeltaTime)
+void AShooterCharacter::CalculateCrosshairSpread(const float DeltaTime)
 {
-	Super::Tick(DeltaTime);
+	/** Максимальная скорость персонажа */ 
+	FVector2d WalkSpeedRange {0.f,600.f};
+	/** Вектор для конвертации скорости персонажа в диапазон от 0 до 1 */
+	FVector2d VelocityMultiplierRange {0.f, 1.f};
+	/** Текущее преобразованное значение скорости */
+	FVector Velocity {GetVelocity()};
+	//Оставляем только боковую составляющую скорости
+	Velocity.Z = 0.f;
+	//Вычисление фактора скорости
+	CrosshairVelocityFactor = FMath::GetMappedRangeValueClamped(WalkSpeedRange,
+																VelocityMultiplierRange,
+																Velocity.Size());//to float
 
-	// Интерполяция для масштабирования при прицеливании
-	CameraInterpZoom(DeltaTime);
-	// Изменение скорости вращения при прицеливании и без него
-	SetLookRates();
+	//Вычисление фактора, когда персонаж в воздухе
+	if (GetCharacterMovement()->IsFalling())
+	{
+		// в воздухе
+		CrosshairInAirFactor = FMath::FInterpTo(CrosshairInAirFactor, 2.25f, DeltaTime, 2.25f);
+	}
+	else
+	{
+		// на земле
+		CrosshairInAirFactor = FMath::FInterpTo(CrosshairInAirFactor, 0.f, DeltaTime, 30.f);
+	}
 
+	//Вычисления уменьшения перекрестия прицела при прицеливании
+	if (bAiming)
+	{
+		CrosshairAimFactor = FMath::FInterpTo(CrosshairAimFactor, 0.3f, DeltaTime, 30.f);
+	}
+	else
+	{
+		CrosshairAimFactor = FMath::FInterpTo(CrosshairAimFactor, 0.f, DeltaTime, 30.f);
+	}
+
+	//Вычисления уменьшения перекрестия прицела при стрельбе
+	if (bFiringBullet)
+	{
+		CrosshairShootingFactor = FMath::FInterpTo(CrosshairShootingFactor, 0.3f, DeltaTime, 60.f);
+	}
+	else
+	{
+		CrosshairShootingFactor = FMath::FInterpTo(CrosshairShootingFactor, 0.0f, DeltaTime, 60.f);
+	}
+
+	
+	CrosshairSpredMultiplier = 0.5f +
+		CrosshairVelocityFactor +
+		CrosshairInAirFactor -
+		CrosshairAimFactor +
+		CrosshairShootingFactor ;
 }
 //================================================================//
-void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+void AShooterCharacter::StartCrosshairBulletFire()
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	check(PlayerInputComponent);
-
-	//Axis
-	PlayerInputComponent->BindAxis("MoveForward", this, &AShooterCharacter::MoveForward);
-	PlayerInputComponent->BindAxis("MoveRight", this, &AShooterCharacter::MoveRight);
-	PlayerInputComponent->BindAxis("TurnRate", this, &AShooterCharacter::TurnAtRate);
-	PlayerInputComponent->BindAxis("LookUpRate", this, &AShooterCharacter::LookUpAtRate);
-	PlayerInputComponent->BindAxis("Turn", this, &AShooterCharacter::Turn);
-	PlayerInputComponent->BindAxis("LookUp", this, &AShooterCharacter::LookUp);
-
-	//Action
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
-	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
-	//Aiming
-	PlayerInputComponent->BindAction("AimingButton", IE_Pressed, this, &AShooterCharacter::AimingButtonPressed);
-	PlayerInputComponent->BindAction("AimingButton", IE_Released, this, &AShooterCharacter::AimingButtonReleased);
-	//Fire
-	PlayerInputComponent->BindAction("FireButton", IE_Pressed, this, &AShooterCharacter::FireWeapon);
+	bFiringBullet = true;
 	
-	
+	GetWorldTimerManager().SetTimer(
+		CrosshairShotTimer,
+		this,
+		&AShooterCharacter::FinishCrosshairBulletFire,
+		ShootTimeDuration);
 }
 //================================================================//
+void AShooterCharacter::FinishCrosshairBulletFire()
+{
+	bFiringBullet = false;
+}
 
-//================================================================//
 
-//================================================================//
 
-//================================================================//
+
+
 
 //================================================================//
 

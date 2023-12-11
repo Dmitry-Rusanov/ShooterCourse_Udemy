@@ -25,6 +25,12 @@ public:
 	//				PUBLIC FUNCTIONS
 	//==================================================================================================================
 
+	/** Вызывается каждый кадр */
+	virtual void Tick(float DeltaTime) override;
+
+	/** Вызывается для привязки функциональности к вводу */
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+		
 	/** Устанавливает значения по умолчанию для свойств этого персонажа. */
 	AShooterCharacter();
 	
@@ -37,12 +43,9 @@ public:
 	/** Получить состояние прицеливания активно / не активно */
 	FORCEINLINE bool GetAiming() const {return bAiming;}
 
-	/** Вызывается каждый кадр */
-	virtual void Tick(float DeltaTime) override;
+	UFUNCTION(BlueprintCallable)
+	float GetCrosshairSpreadMultiplier() const;
 
-	/** Вызывается для привязки функциональности к вводу */
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	
 
 protected:
 	/**
@@ -50,10 +53,134 @@ protected:
 	 */
 	virtual void BeginPlay() override;
 	
+
+private:
+	
+	//==================================================================================================================
+	//				PRIVATE PROPERTIES & FIELDS
+	//==================================================================================================================
+
+	/** Держатель камеры */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	USpringArmComponent* CameraBoom;
+
+	/** Камера позади персонажа */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))	
+	UCameraComponent* FollowCamera;
+	
+	/** Базовая скорость горизонтального вращения (взгляд вправо/влево), в град/сек */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float BaseTurnRate;
+
+	/** Базовая скорость вертикального вращения (взгляд вверх/вниз) в град/сек */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float BaseLookUpRate;
+
+	/** Базовая скорость горизонтального вращения (взгляд вправо/влево), в град/сек, при стрельбе от бедра */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float HipTurnRate;
+
+	/** Базовая скорость вертикального вращения (взгляд вверх/вниз) в град/сек, при стрельбе от бедра */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float HipLookUpRate;
+
+	/** Базовая скорость горизонтального вращения (взгляд вправо/влево), в град/сек, при прицеливании*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float AimingTurnRate;
+
+	/** Базовая скорость вертикального вращения (взгляд вверх/вниз) в град/сек, при прицеливании*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float AimingLookUpRate;
+
+	/** Множитель обзора при использовании Х оси мыши, в режиме стрельбы от бедра */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float MouseHipTurnRate;
+
+	/** Множитель обзора при использовании Y оси мыши, в режиме стрельбы от бедра */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float MouseHipLookUpRate;
+
+	/** Множитель обзора при использовании Х оси мыши, в режиме прицеливания */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float MouseAimingTurnRate;
+
+	/** Множитель обзора при использовании Y оси мыши, в режиме прицеливания */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
+	float MouseAimingLookUpRate;
+	
+	/** Звук выстрела из оружия */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	USoundCue* FireSound;
+
+	/** Вспышка у ствола при выстреле */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	UParticleSystem* MuzzleFlash;
+
+	/** Разрыв на месте попадания */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	UParticleSystem* ImpactParticles;
+
+	/** Дымный след от выстрела */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	UParticleSystem* BeamParticles;
+	
+	/** Анимационный монтаж стрельбы из оружия */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	UAnimMontage* HipFireMontege;
+
+	/** Вкл/отк приближения при прицеливании */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	bool bAiming;
+
+	/** Стандартное значение поля обзора камеры */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	float CameraDefaultFOV;
+
+	/** Поле обзора при приближении */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	float CameraZoomedFOV;
+
+	/** Текущее значение поля обзора  */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	float CameraCurrentFOV;
+
+	/** Скорость интерполяции при приближении (прицеливании) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
+	float ZoomInterpSpeed;
+
+	/** Множитель расширения перекрестия прицела */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "C++ | Crosshair", meta=(AllowPrivateAccess = "true"))
+	float CrosshairSpredMultiplier;
+
+	/** Фактор расширения перекрестия прицела от скорости */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "C++ | Crosshair", meta=(AllowPrivateAccess = "true"))
+	float CrosshairVelocityFactor;
+
+	/**  Фактор расширения перекрестия прицела, если персонаж в воздухе */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "C++ | Crosshair", meta=(AllowPrivateAccess = "true"))
+	float CrosshairInAirFactor;
+
+	/** Фактор расширения перекрестия прицела в режиме прицеливания */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "C++ | Crosshair", meta=(AllowPrivateAccess = "true"))
+	float CrosshairAimFactor;
+
+	/** Фактор расширения перекрестия прицела при стрельбе */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "C++ | Crosshair", meta=(AllowPrivateAccess = "true"))
+	float CrosshairShootingFactor;
+
+	float ShootTimeDuration;
+	bool bFiringBullet;
+	FTimerHandle CrosshairShotTimer;
+
+	
+	//==================================================================================================================
+	//				PRIVATE FUNCTIONS
+	//==================================================================================================================	
+
 	/**
-	 * Движение вперед / назад 
-	 * @param Value 1.0f - вперед, -1,0f - назад
-	 */
+ * Движение вперед / назад 
+ * @param Value 1.0f - вперед, -1,0f - назад
+ */
 	void MoveForward(float Value);
 
 	/**
@@ -96,7 +223,7 @@ protected:
 	 * @param OutBeamEndLocation ссылка на конечную точку дымного следа от выстрела
 	 * @return true - было попадание
 	 */
-	bool GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& OutBeamEndLocation);
+	bool GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& OutBeamEndLocation) const;
 	
 	/**
 	 * Стрельба из оружия 
@@ -123,101 +250,21 @@ protected:
 	 * Установка скорости вращения при начале/окончании прицеливания
 	 */
 	void SetLookRates();
+
+	/**
+	 * Расчёт размера перекрестия прицела при различных факторах
+	 * @param DeltaTime Время для интерполяции восстановления прицела
+	 */
+	void CalculateCrosshairSpread(float DeltaTime);
+
+	/**
+	 * Функция для запуска таймера влияющего на разброс прицела при стрельбе
+	 */
+	void StartCrosshairBulletFire();
 	
-private:
-	
-	//==================================================================================================================
-	//				PRIVATE PROPERTIES & FIELDS
-	//==================================================================================================================
-
-	/** Держатель камеры */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
-	USpringArmComponent* CameraBoom;
-
-	/** Камера позади персонажа */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))	
-	UCameraComponent* FollowCamera;
-	
-	/** Базовая скорость горизонтального вращения (взгляд вправо/влево), в град/сек */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
-	float BaseTurnRate;
-
-	/** Базовая скорость вертикального вращения (взгляд вверх/вниз) в град/сек */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
-	float BaseLookUpRate;
-
-	/** Базовая скорость горизонтального вращения (взгляд вправо/влево), в град/сек, при стрельбе от бедра */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
-	float HipTurnRate;
-
-	/** Базовая скорость вертикального вращения (взгляд вверх/вниз) в град/сек, при стрельбе от бедра */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
-	float HipLookUpRate;
-
-	/** Базовая скорость горизонтального вращения (взгляд вправо/влево), в град/сек, при прицеливании*/
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
-	float AimingTurnRate;
-
-	/** Базовая скорость вертикального вращения (взгляд вверх/вниз) в град/сек, при прицеливании*/
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
-	float AimingLookUpRate;
-
-	/** Множитель обзора при использовании Х оси мыши, в режиме стрельбы от бедра */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
-	float MouseHipTurnRate;
-
-	/** Множитель обзора при использовании Y оси мыши, в режиме стрельбы от бедра */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
-	float MouseHipLookUpRate;
-
-	/** Множитель обзора при использовании Х оси мыши, в режиме прицеливания */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
-	float MouseAimingTurnRate;
-
-	/** Множитель обзора при использовании Y оси мыши, в режиме прицеливания */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "C++ | Camera", meta=(AllowPrivateAccess = "true"))
-	float MouseAimingLookUpRate;
-	
-	/** Звук выстрела из оружия */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
-	USoundCue* FireSound;
-
-	/** Вспышка у ствола при выстреле */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
-	UParticleSystem* MuzzleFlash;
-
-	/** Разрыв на месте попадания */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
-	UParticleSystem* ImpactParticles;
-
-	/** Дымный след от выстрела */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
-	UParticleSystem* BeamParticles;
-	
-	/** Анимационный монтаж стрельбы из оружия */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
-	UAnimMontage* HipFireMontege;
-
-	/** Вкл/отк приближения при прицеливании */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
-	bool bAiming;
-
-	/** Стандартное значение поля обзора камеры */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
-	float CameraDefaultFOV;
-
-	/** Поле обзора при приближении */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
-	float CameraZoomedFOV;
-
-	/** Текущее значение поля обзора  */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
-	float CameraCurrentFOV;
-
-	/** Скорость интерполяции при приближении (прицеливании) */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
-	float ZoomInterpSpeed;
-
-
-
+	/**
+	 * Функция вызывается по завершении таймера для разброса прицела при стрельбе 
+	 */
+	UFUNCTION()
+	void FinishCrosshairBulletFire();
 };
