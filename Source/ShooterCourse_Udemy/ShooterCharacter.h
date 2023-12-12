@@ -126,7 +126,7 @@ private:
 	
 	/** Анимационный монтаж стрельбы из оружия */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
-	UAnimMontage* HipFireMontage;
+	UAnimMontage* HipFireMontege;
 
 	/** Вкл/отк приближения при прицеливании */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "C++ | Combat", meta=(AllowPrivateAccess = "true"))
@@ -150,7 +150,7 @@ private:
 
 	/** Множитель расширения перекрестия прицела */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "C++ | Crosshair", meta=(AllowPrivateAccess = "true"))
-	float CrosshairSpreadMultiplier;
+	float CrosshairSpredMultiplier;
 
 	/** Фактор расширения перекрестия прицела от скорости */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "C++ | Crosshair", meta=(AllowPrivateAccess = "true"))

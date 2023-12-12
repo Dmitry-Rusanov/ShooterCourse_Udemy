@@ -28,7 +28,7 @@ AShooterCharacter::AShooterCharacter() :
 	CameraZoomedFOV(35.f),
 	CameraCurrentFOV(0.f),
 	ZoomInterpSpeed(10.f),
-	CrosshairSpreadMultiplier(0.f),
+	CrosshairSpredMultiplier(0.f),
 	CrosshairVelocityFactor(0.f),
 	CrosshairInAirFactor(0.f),
 	CrosshairAimFactor(0.f),
@@ -117,7 +117,7 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 //================================================================//
 float AShooterCharacter::GetCrosshairSpreadMultiplier() const
 {
-return CrosshairSpreadMultiplier;	
+return CrosshairSpredMultiplier;	
 }
 //================================================================//
 void AShooterCharacter::MoveForward(const float Value)
@@ -257,9 +257,9 @@ void AShooterCharacter::FireWeapon()
 			}
 		}
 	}
-	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance(); AnimInstance && HipFireMontage)
+	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance(); AnimInstance && HipFireMontege)
 	{
-		AnimInstance->Montage_Play(HipFireMontage);
+		AnimInstance->Montage_Play(HipFireMontege);
 		AnimInstance->Montage_JumpToSection(FName("StartFire"));
 	}
 	StartCrosshairBulletFire();
@@ -351,7 +351,7 @@ void AShooterCharacter::CalculateCrosshairSpread(const float DeltaTime)
 	}
 
 	
-	CrosshairSpreadMultiplier = 0.5f +
+	CrosshairSpredMultiplier = 0.5f +
 		CrosshairVelocityFactor +
 		CrosshairInAirFactor -
 		CrosshairAimFactor +
